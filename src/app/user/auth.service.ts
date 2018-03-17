@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs/Subject';
-import {CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js';
+import {CognitoUserPool, CognitoUserAttribute,AuthenticationDetails, CognitoUser, CognitoUserSession } from 'amazon-cognito-identity-js';
 import { Observable } from 'rxjs/Observable';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
@@ -42,6 +42,7 @@ export class AuthService {
         this.registeredUser = result.user;
         return;
       }
+      
     });
     return;
   }
@@ -49,7 +50,18 @@ export class AuthService {
     this.authIsLoading.next(true);
     const userData = {
       Username: username,
+      Pool: userPool
     };
+    const cognitUser =  new CognitoUser(userData);
+    cognitUser.confirmRegistration(code, true, (err, result)=>{
+      if(err){
+        this.authDidFail.next(true);
+        this.authIsLoading.next(false);
+        return;
+      }
+      this.authIsLoading.next(false);
+      this.router.navigate(['/']);
+    });
   }
   signIn(username: string, password: string): void {
     this.authIsLoading.next(true);
@@ -57,6 +69,22 @@ export class AuthService {
       Username: username,
       Password: password
     };
+    const authDetails = new AuthenticationDetails(authData);
+    const userData ={
+      Username: username,
+      Pool: userPool
+    };
+    const cognitUser =  new CognitoUser(userData);
+    cognitUser.authenticateUser(authDetails, {
+      onSuccess(result: CognitoUserSession){
+      
+        console.log(result);
+      },
+      onFailure(err){
+        
+        console.log(err);
+      }
+    })
     this.authStatusChanged.next(true);
     return;
   }
